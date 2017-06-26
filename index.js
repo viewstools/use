@@ -303,8 +303,8 @@ export default class AppLogic extends React.Component {
   }
 }`
 
-const APP_VIEW_LOGIC_NATIVE = `import { Animated, AppLoading, Font } from 'expo'
-import { Dimensions } from 'react-native'
+const APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
+import { Animated, Dimensions } from 'react-native'
 import fonts from './fonts.js'
 import React from 'react'
 import App from './App.view.js'
