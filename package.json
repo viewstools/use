@@ -1,0 +1,23 @@
+{
+  "name": "use-views",
+  "version": "0.1.0",
+  "main": "index.js",
+  "bin": {
+    "use-views": "./cli.js"
+  },
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "has-yarn": "^1.0.0",
+    "version": "^0.1.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viewsdx/use.git"
+  },
+  "author": "Darío Javier Cravero <dario@uxtemple.com>",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/viewsdx/use/issues"
+  },
+  "homepage": "https://github.com/viewsdx/use#readme"
+}
