@@ -1,6 +1,8 @@
 const { execSync } = require('child_process')
+const chalk = require('chalk')
 const fs = require('fs')
 const hasYarn = require('has-yarn')
+const ora = require('ora')
 const path = require('path')
 const version = require('version')
 
@@ -8,33 +10,33 @@ const cwd = process.cwd()
 const pkgPath = path.join(cwd, 'package.json')
 
 if (!fs.existsSync(pkgPath)) {
-  console.log(
-    `You should run this command on the root of your React DOM or React Native project.`
-  )
+  unsupported()
   process.exit()
 }
 
 const pkg = require(pkgPath)
-
-// exit if this is already a views-morph process
-if ('views-morph' in pkg.devDependencies) {
-  console.log(`This is already a Views project! :)`)
-  process.exit()
-}
-
 const isReactDom = 'react-dom' in pkg.dependencies
 const isReactNative = 'react-native' in pkg.dependencies
 
-if (!isReactDom && !isReactNative) {
-  console.log(`This isn't either a React DOM or a React Native project. :/`)
-  console.log(
-    `Use create-react-app (https://github.com/facebookincubator/create-react-app) to make a React DOM project`
-  )
-  console.log(
-    `or create-react-native-app (https://github.com/react-community/create-react-native-app) to make a React Native project`
-  )
+// exit if this is already a views-morph process
+if ('views-morph' in pkg.devDependencies) {
+  console.log(chalk.blue(`This is already a Views project! 🔥 🎉 \n`))
+  help()
   process.exit()
 }
+
+if (!isReactDom && !isReactNative) {
+  unsupported()
+  process.exit()
+}
+
+console.log(
+  `In a few minutes, your ${isReactDom
+    ? 'web'
+    : 'native'} project will be ready to use Views! 😇\n`
+)
+
+let spinner = ora('Getting the latest versions of Views dependencies').start()
 
 function getViewsMorphDependency() {
   version.fetch('views-morph', function(err, version) {
@@ -82,6 +84,9 @@ function getConcurrentlyDependency() {
 }
 
 function setup() {
+  spinner.succeed()
+  spinner = ora('Setting up the project').start()
+
   // setup scripts
   pkg.scripts.dev = pkg.scripts.start
   pkg.scripts.start = `concurrently "npm run dev" "npm run views"`
@@ -101,8 +106,14 @@ function setup() {
   // write package.json
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
 
+  spinner.succeed()
+  spinner = ora('Installing the dependencies').start()
+
   // install the dependencies
   execSync(hasYarn(cwd) ? 'yarn' : 'npm install')
+
+  spinner.succeed()
+  spinner = ora('Preparing a sample View for you to work with').start()
 
   // bootstrap files
   if (isReactDom) {
@@ -148,15 +159,92 @@ function setup() {
   // write App.view
   fs.writeFileSync(path.join(cwd, 'src', 'App.view'), APP_VIEW)
 
+  spinner.succeed()
+
+  console.log('🦄 \n')
+
   // :)
-  console.log(`This is now a Views project 🎉!!!`)
-  console.log(`Run it with ${hasYarn(cwd) ? 'yarn start' : 'npm start'}\n`)
-  console.log(`You can find the docs at https://github.com/viewsdx/docs`)
+  console.log(chalk.blue(`This is now a Views project 🎉!!!`))
+
   console.log(
-    `If you need any help, get in touch at https://twitter.com/viewsdx or`
+    `Go ahead and open the file ${chalk.green(
+      'src/App.view'
+    )} in your editor and change something ✏️`
   )
-  console.log(`join our Slack community at https://slack.viewsdx.com\n`)
+  console.log(
+    `If this is your first time using Views, here's how to get your editor to understand Views files ${chalk.blue(
+      'https://github.com/viewsdx/docs#syntax-highlighting'
+    )}`
+  )
+  help()
+}
+
+function help() {
+  if (isReactDom) {
+    console.log(
+      `Run it with ${hasYarn(cwd)
+        ? chalk.green('yarn start')
+        : chalk.green('npm start')}\n`
+    )
+  } else {
+    console.log(
+      `Run the iOS simulator with ${chalk.green(
+        'npm run ios'
+      )} and the Android one with ${chalk.green('npm run android')}`
+    )
+    console.log(`
+Sometimes the simulator fails to load. You will want to stop the command by pressing
+${chalk.yellow('ctrl+c')} and running ${chalk.yellow('npm start')} instead.
+If the simulator is already open, press the button to try again.
+
+You can also use a real device for testing, https://github.com/react-community/create-react-native-app#npm-run-ios
+for more info.`)
+  }
+  console.log(
+    `You can find the docs at ${chalk.blue('https://github.com/viewsdx/docs')}`
+  )
+  getInTouch()
   console.log(`Happy coding! :)`)
+}
+
+function unsupported() {
+  console.log(
+    `It looks like the directory you're on isn't either a create-react-app or create-react-native-app project.`
+  )
+  console.log(`Is ${chalk.yellow(cwd)} the right folder?\n`)
+  console.log(
+    `If you don't have a project and want to make a new one, follow these instructions:`
+  )
+  console.log(`For ${chalk.blue('React DOM')}, ie, a web project:`)
+  console.log(
+    chalk.green(`npm install --global create-react-app
+create-react-app my-app
+cd my-app
+use-views`)
+  )
+
+  console.log(
+    `\nFor ${chalk.blue('React Native')}, ie, an iOS or Android project:`
+  )
+  console.log(
+    chalk.green(`npm install --global create-react-native-app
+create-react-native-app my-native-app
+cd my-native-app
+use-views`)
+  )
+
+  getInTouch()
+}
+
+function getInTouch() {
+  console.log(
+    `\nIf you need any help, get in touch at ${chalk.blue(
+      'https://twitter.com/viewsdx'
+    )} or`
+  )
+  console.log(
+    `join our Slack community at ${chalk.blue('https://slack.viewsdx.com')}\n`
+  )
 }
 
 // start
