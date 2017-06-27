@@ -341,7 +341,7 @@ export default class AppLogic extends React.Component {
   }
 
   render() {
-    if (this.state.loading) <AppLoading />
+    if (this.state.loading) return <AppLoading />
 
     // pass the animated values to the view
     return <App {...this.getAnimated()} height={height} width={width} />
