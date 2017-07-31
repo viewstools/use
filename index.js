@@ -61,10 +61,10 @@ function getReactRouterDependency() {
 
 function getAnimated() {
   if (isReactDom) {
-    version.fetch('animated', function(err, version) {
+    version.fetch('react-dom-animated', function(err, version) {
       if (err) return console.error(err)
 
-      pkg.dependencies.animated = `^${version}`
+      pkg.dependencies['react-dom-animated'] = `^${version}`
 
       getConcurrentlyDependency()
     })
@@ -94,7 +94,7 @@ function setup() {
     ? 'react-dom'
     : 'react-native'}`
   if (isReactDom) {
-    pkg.scripts.prebuild = `views-morph src --as react-dom --no-tests`
+    pkg.scripts.prebuild = `views-morph src --as react-dom`
   } else {
     pkg.scripts['dev:ios'] = pkg.scripts.ios
     pkg.scripts.ios = `concurrently "npm run dev:ios" "npm run views"`
@@ -375,10 +375,12 @@ const FONTS_NATIVE = `export default {
 
 const GITIGNORE = `
 # views
-**/*.data.js
 **/*.view.js
+**/*.view.data.js
 **/*.view.css
-**/*.view.tests.js`
+**/*.view.tests.js
+src/views-preview.js
+public/preview.*`
 
 const VIEWS_CSS = `* {
   -webkit-overflow-scrolling: touch;
