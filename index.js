@@ -395,6 +395,7 @@ const GITIGNORE = `
 **/*.view.tests.js`
 
 const VIEWS_CSS = `* {
+  -ms-overflow-style: -ms-autohiding-scrollbar;
   -webkit-overflow-scrolling: touch;
 }
 html,
