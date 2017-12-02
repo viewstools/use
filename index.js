@@ -18,6 +18,10 @@ const pkg = require(pkgPath)
 const isReactDom = 'react-dom' in pkg.dependencies
 const isReactNative = 'react-native' in pkg.dependencies
 
+if (!pkg.devDependencies) {
+  pkg.devDependencies = {}
+}
+
 // exit if this is already a views-morph process
 if ('views-morph' in pkg.devDependencies) {
   console.log(chalk.blue(`This is already a Views project! 🔥 🎉 \n`))
@@ -90,7 +94,7 @@ function setup() {
   // setup scripts
   pkg.scripts.dev = pkg.scripts.start
   pkg.scripts.start = `concurrently "npm run dev" "npm run views"`
-  pkg.scripts.views = `views-morph src --watch --as ${isReactDom
+  pkg.scripts.views = `views-morph src/views --watch --as ${isReactDom
     ? 'react-dom'
     : 'react-native'}`
   if (isReactDom) {
@@ -115,31 +119,41 @@ function setup() {
   spinner.succeed()
   spinner = ora('Preparing a sample View for you to work with').start()
 
+  // create a src directory
+  try {
+    fs.mkdirSync(path.join(cwd, 'src'))
+  } catch (err) {}
+  try {
+    fs.mkdirSync(path.join(cwd, 'src', 'views'))
+  } catch (err) {}
+
   // bootstrap files
   if (isReactDom) {
     // in src/index.js
     const indexPath = path.join(cwd, 'src', 'index.js')
     const index = fs.readFileSync(indexPath, { encoding: 'utf-8' })
     // set App to load App.view.logic
-    fs.writeFileSync(indexPath, index.replace(`./App`, `./App.view.logic.js`))
+    fs.writeFileSync(
+      indexPath,
+      index.replace(`./App`, `./views/App.view.logic.js`)
+    )
 
     // remove unused files
-    ;['App.css', 'App.js', 'App.test.js', 'logo.svg'].forEach(f =>
-      fs.unlinkSync(path.join(cwd, 'src', f))
-    )
+    ;['App.css', 'App.js', 'App.test.js', 'logo.svg'].forEach(f => {
+      try {
+        fs.unlinkSync(path.join(cwd, 'src', f))
+      } catch (err) {}
+    })
 
     // write views flexbox first css
     fs.writeFileSync(path.join(cwd, 'src', 'index.css'), VIEWS_CSS)
 
     // write App.view.logic.js
     fs.writeFileSync(
-      path.join(cwd, 'src', 'App.view.logic.js'),
+      path.join(cwd, 'src', 'views', 'App.view.logic.js'),
       APP_VIEW_LOGIC_DOM
     )
   } else {
-    // create a src directory
-    fs.mkdirSync(path.join(cwd, 'src'))
-
     // write App.js
     fs.writeFileSync(path.join(cwd, 'App.js'), APP_NATIVE)
 
@@ -157,7 +171,7 @@ function setup() {
   fs.appendFileSync(path.join(cwd, '.gitignore'), GITIGNORE)
 
   // write App.view
-  fs.writeFileSync(path.join(cwd, 'src', 'App.view'), APP_VIEW)
+  fs.writeFileSync(path.join(cwd, 'src', 'views', 'App.view'), APP_VIEW)
 
   spinner.succeed()
 
@@ -168,7 +182,7 @@ function setup() {
 
   console.log(
     `Go ahead and open the file ${chalk.green(
-      'src/App.view'
+      'src/views/App.view'
     )} in your editor and change something ✏️`
   )
   console.log(
@@ -378,18 +392,39 @@ const GITIGNORE = `
 **/*.view.js
 **/*.view.data.js
 **/*.view.css
-**/*.view.tests.js
-src/views-preview.js
-public/preview.*`
+**/*.view.tests.js`
 
 const VIEWS_CSS = `* {
   -webkit-overflow-scrolling: touch;
 }
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
 }
-a,button,div,img,input,form,h1,h2,h3,h4,h5,h6,h7,nav,label,li,ol,p,span,svg,ul {
+a,
+button,
+div,
+img,
+input,
+form,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+h7,
+nav,
+label,
+li,
+ol,
+p,
+span,
+svg,
+ul,
+textarea {
   box-sizing: border-box;
   position: relative;
   display: flex;
@@ -401,10 +436,17 @@ a,button,div,img,input,form,h1,h2,h3,h4,h5,h6,h7,nav,label,li,ol,p,span,svg,ul {
   outline: 0;
   text-decoration: none;
   color: inherit;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
 }
-a,button,input {
+a,
+button,
+input,
+textarea {
   background-color: transparent;
   border: 0;
+  border-radius: 0;
   margin: 0;
   padding: 0;
   white-space: normal;
@@ -417,4 +459,10 @@ button::-moz-focus-inner {
   border: 0;
   margin: 0;
   padding: 0;
+}
+/* remove number arrows */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }`
