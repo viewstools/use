@@ -1,13 +1,38 @@
 const { execSync } = require('child_process')
+const boxen = require('boxen')
 const chalk = require('chalk')
 const fs = require('fs')
 const hasYarn = require('has-yarn')
 const ora = require('ora')
 const path = require('path')
-const version = require('version')
+const getLatestVersion = require('latest-version')
+const updateNotifier = require('update-notifier')
 
 const cwd = process.cwd()
 const pkgPath = path.join(cwd, 'package.json')
+const thisPkg = require('./package.json')
+
+if (thisPkg.name === 'use-views') {
+  console.log(
+    boxen(
+      [
+        chalk.red(
+          `use-views is deprecated, use @viewstools/use instead. Run this to update:`
+        ),
+        chalk.green(`npm install --global @viewstools/use`),
+        chalk.green(`npm uninstall --global use-views`),
+      ].join('\n'),
+      {
+        padding: 1,
+      }
+    )
+  )
+} else {
+  updateNotifier({
+    pkg: thisPkg,
+    updateCheckInterval: 0,
+  }).notify()
+}
 
 if (!fs.existsSync(pkgPath)) {
   unsupported()
@@ -22,8 +47,8 @@ if (!pkg.devDependencies) {
   pkg.devDependencies = {}
 }
 
-// exit if this is already a views-morph process
-if ('views-morph' in pkg.devDependencies) {
+// exit if this is already a views-morph project
+if ('@viewstools/morph' in pkg.devDependencies) {
   console.log(chalk.blue(`This is already a Views project! 🔥 🎉 \n`))
   help()
   process.exit()
@@ -35,68 +60,57 @@ if (!isReactDom && !isReactNative) {
 }
 
 console.log(
-  `In a few minutes, your ${isReactDom
-    ? 'web'
-    : 'native'} project will be ready to use Views! 😇\n`
+  `In a few minutes, your ${
+    isReactDom ? 'web' : 'native'
+  } project will be ready to use Views! 😇\n`
 )
 
 let spinner = ora('Getting the latest versions of Views dependencies').start()
 
-function getViewsMorphDependency() {
-  version.fetch('views-morph', function(err, version) {
-    if (err) return console.error(err)
+const addDependency = (dep, version) => (pkg.dependencies[dep] = `^${version}`)
+const addDevDependency = (dep, version) =>
+  (pkg.devDependencies[dep] = `^${version}`)
 
-    pkg.devDependencies['views-morph'] = `^${version}`
-
-    getReactRouterDependency()
+async function run() {
+  // dependencies
+  await Promise.all([
+    getLatestVersion('@viewstools/morph'),
+    getLatestVersion('@viewstools/e2e'),
+    getLatestVersion('concurrently'),
+  ]).then(([morph, e2e, concurrently]) => {
+    addDevDependency('@viewstools/morph', morph)
+    addDevDependency('@viewstools/e2e', e2e)
+    addDevDependency('concurrently', concurrently)
   })
-}
 
-function getReactRouterDependency() {
-  const dep = isReactDom ? 'react-router-dom' : 'react-router-native'
-  version.fetch(dep, function(err, version) {
-    if (err) return console.error(err)
-
-    pkg.dependencies[dep] = `^${version}`
-
-    getAnimated()
+  const reactRouter = isReactDom ? 'react-router-dom' : 'react-router-native'
+  await Promise.all([
+    getLatestVersion(reactRouter),
+    getLatestVersion('prop-types'),
+  ]).then(([router, propTypes]) => {
+    addDependency(reactRouter, router)
+    addDependency('prop-types', propTypes)
   })
-}
 
-function getAnimated() {
   if (isReactDom) {
-    version.fetch('react-dom-animated', function(err, version) {
-      if (err) return console.error(err)
-
-      pkg.dependencies['react-dom-animated'] = `^${version}`
-
-      getConcurrentlyDependency()
+    await Promise.all([
+      getLatestVersion('emotion'),
+      getLatestVersion('react-emotion'),
+    ]).then(([emotion, reactEmotion]) => {
+      addDependency('emotion', emotion)
+      addDependency('react-emotion', reactEmotion)
     })
-  } else {
-    getConcurrentlyDependency()
   }
-}
 
-function getConcurrentlyDependency() {
-  version.fetch('concurrently', function(err, version) {
-    if (err) return console.error(err)
-
-    pkg.devDependencies['concurrently'] = `^${version}`
-
-    setup()
-  })
-}
-
-function setup() {
   spinner.succeed()
   spinner = ora('Setting up the project').start()
 
   // setup scripts
   pkg.scripts.dev = pkg.scripts.start
   pkg.scripts.start = `concurrently "npm run dev" "npm run views"`
-  pkg.scripts.views = `views-morph src/views --watch --as ${isReactDom
-    ? 'react-dom'
-    : 'react-native'}`
+  pkg.scripts.views = `views-morph src --watch --as ${
+    isReactDom ? 'react-dom' : 'react-native'
+  }`
   if (isReactDom) {
     pkg.scripts.prebuild = `views-morph src --as react-dom`
   } else {
@@ -124,7 +138,7 @@ function setup() {
     fs.mkdirSync(path.join(cwd, 'src'))
   } catch (err) {}
   try {
-    fs.mkdirSync(path.join(cwd, 'src', 'views'))
+    fs.mkdirSync(path.join(cwd, 'src', 'Main'))
   } catch (err) {}
 
   // bootstrap files
@@ -135,7 +149,7 @@ function setup() {
     // set App to load App.view.logic
     fs.writeFileSync(
       indexPath,
-      index.replace(`./App`, `./views/App.view.logic.js`)
+      index.replace(`./App`, `./Main/App.view.logic.js`)
     )
 
     // remove unused files
@@ -150,7 +164,7 @@ function setup() {
 
     // write App.view.logic.js
     fs.writeFileSync(
-      path.join(cwd, 'src', 'views', 'App.view.logic.js'),
+      path.join(cwd, 'src', 'Main', 'App.view.logic.js'),
       APP_VIEW_LOGIC_DOM
     )
   } else {
@@ -159,7 +173,7 @@ function setup() {
 
     // write App.view.logic.js
     fs.writeFileSync(
-      path.join(cwd, 'src', 'App.view.logic.js'),
+      path.join(cwd, 'src', 'Main', 'App.view.logic.js'),
       APP_VIEW_LOGIC_NATIVE
     )
 
@@ -171,7 +185,7 @@ function setup() {
   fs.appendFileSync(path.join(cwd, '.gitignore'), GITIGNORE)
 
   // write App.view
-  fs.writeFileSync(path.join(cwd, 'src', 'views', 'App.view'), APP_VIEW)
+  fs.writeFileSync(path.join(cwd, 'src', 'Main', 'App.view'), APP_VIEW)
 
   spinner.succeed()
 
@@ -182,12 +196,12 @@ function setup() {
 
   console.log(
     `Go ahead and open the file ${chalk.green(
-      'src/views/App.view'
+      'src/Main/App.view'
     )} in your editor and change something ✏️`
   )
   console.log(
     `If this is your first time using Views, here's how to get your editor to understand Views files ${chalk.blue(
-      'https://github.com/viewsdx/docs#syntax-highlighting'
+      'https://github.com/viewstools/docs#syntax-highlighting'
     )}`
   )
   help()
@@ -196,9 +210,9 @@ function setup() {
 function help() {
   if (isReactDom) {
     console.log(
-      `Run it with ${hasYarn(cwd)
-        ? chalk.green('yarn start')
-        : chalk.green('npm start')}\n`
+      `Run it with ${
+        hasYarn(cwd) ? chalk.green('yarn start') : chalk.green('npm start')
+      }\n`
     )
   } else {
     console.log(
@@ -215,7 +229,9 @@ You can also use a real device for testing, https://github.com/react-community/c
 for more info.`)
   }
   console.log(
-    `You can find the docs at ${chalk.blue('https://github.com/viewsdx/docs')}`
+    `You can find the docs at ${chalk.blue(
+      'https://github.com/viewstools/docs'
+    )}`
   )
   getInTouch()
   console.log(`Happy coding! :)`)
@@ -253,124 +269,66 @@ use-views`)
 function getInTouch() {
   console.log(
     `\nIf you need any help, get in touch at ${chalk.blue(
-      'https://twitter.com/viewsdx'
+      'https://twitter.com/viewstools'
     )} or`
   )
   console.log(
-    `join our Slack community at ${chalk.blue('https://slack.viewsdx.com')}\n`
+    `join our Slack community at ${chalk.blue('https://slack.views.tools')}\n`
   )
 }
 
 // start
-getViewsMorphDependency()
+run()
 
 // files
-const APP_VIEW = `App is Vertical
+const APP_VIEW = `App Vertical
 alignItems center
 flex 1
 justifyContent center
-transform props.transform
-height props.height
-width props.width
 Text
 fontSize 18
-text Hello Views :)!`
+text < Hello Views Tools!`
 
-const APP_VIEW_LOGIC_DOM = `import { spring, Value } from 'animated'
-import React from 'react'
+const APP_VIEW_LOGIC_DOM = `import React from 'react'
 import App from './App.view.js'
 
-const width = window.innerWidth
-  || document.documentElement.clientWidth
-  || document.body.clientWidth
-
-const height = window.innerHeight
-  || document.documentElement.clientHeight
-  || document.body.clientHeight
-
 export default class AppLogic extends React.Component {
-  // this is our animated value
-  // we use react-native Animated for this, see their docs:
-  // https://facebook.github.io/react-native/docs/animated.html
-  // https://github.com/animatedjs/animated
-  a = new Value(0)
-
-  componentWillMount() {
-    // and here we make it pop through a spring animation! :)
-    spring(this.a, { toValue: 1 }).start()
-  }
-
-  // get the values we want to animate
-  getAnimated() {
-    return {
-      transform: [
-        {
-          scale: this.a,
-        },
-      ],
-    }
-  }
-
   render() {
-    // pass the animated values to the view
-    return <App {...this.getAnimated()} height={height} width={width} />
+    return <App {...this.props} />
   }
 }`
 
 const APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
-import { Animated, Dimensions } from 'react-native'
-import fonts from './fonts.js'
+import { Animated } from 'react-native'
+import fonts from '../fonts.js'
 import React from 'react'
 import App from './App.view.js'
 
-const { spring, Value } = Animated
-const { height, width } = Dimensions.get('window')
-
 export default class AppLogic extends React.Component {
-  // this is our animated value
-  // we use react-native Animated for this, see their docs:
-  // https://facebook.github.io/react-native/docs/animated.html
-  a = new Value(0)
-
   state = {
-    loading: true,
-  }
-
-  componentWillMount() {
-    this.cacheResourcesAsync()
-
-    // and here we make it pop through a spring animation! :)
-    spring(this.a, { toValue: 1 }).start()
-  }
-
-  // get the values we want to animate
-  getAnimated() {
-    return {
-      transform: [
-        {
-          scale: this.a,
-        },
-      ],
-    }
+    isReady: false,
   }
 
   render() {
-    if (this.state.loading) return <AppLoading />
+    if (!this.state.isReady) {
+      return (
+        <AppLoading
+          startAsync={this._cacheResourcesAsync}
+          onFinish={() => this.setState({ isReady: true })}
+          onError={console.warn}
+        />
+      );
+    }
 
-    // pass the animated values to the view
-    return <App {...this.getAnimated()} height={height} width={width} />
+    return <App {...this.props} />
   }
 
-  async cacheResourcesAsync() {
-    await Font.loadAsync(fonts)
-
-    this.setState({
-      loading: false,
-    })
+  _cacheResourcesAsync() {
+    return Font.loadAsync(fonts)
   }
 }`
 
-const APP_NATIVE = `import App from './src/App.view.logic.js'
+const APP_NATIVE = `import App from './src/Main/App.view.logic.js'
 export default App`
 
 const FONTS_NATIVE = `export default {
@@ -390,13 +348,11 @@ const FONTS_NATIVE = `export default {
 const GITIGNORE = `
 # views
 **/*.view.js
-**/*.view.data.js
-**/*.view.css
-**/*.view.tests.js`
+**/Fonts/*.js`
 
 const VIEWS_CSS = `* {
-  -ms-overflow-style: -ms-autohiding-scrollbar;
   -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
 }
 html,
 body,
@@ -404,66 +360,40 @@ body,
   height: 100%;
   margin: 0;
 }
-a,
-button,
-div,
-img,
-input,
-form,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-h7,
-nav,
-label,
-li,
-ol,
-p,
-span,
-svg,
-ul,
-textarea {
+.views-block, #root {
+  align-items: stretch;
   box-sizing: border-box;
-  position: relative;
+  color: inherit;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   flex-shrink: 0;
-  margin: 0;
-  padding: 0;
-  outline: 0;
-  text-decoration: none;
-  color: inherit;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
   hyphens: auto;
-}
-a,
-button,
-input,
-textarea {
-  background-color: transparent;
-  border: 0;
-  border-radius: 0;
   margin: 0;
+  outline: 0;
+  overflow-wrap: break-word;
   padding: 0;
-  white-space: normal;
-  line-height: inherit;
-  text-align: left;
+  position: relative;
+  text-decoration: none;
+  word-wrap: break-word;
+  background-color: transparent;
+  border-radius: 0;
+  border: 0;
   font-family: inherit;
   font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
 }
-button::-moz-focus-inner {
+.views-block::-moz-focus-inner {
   border: 0;
   margin: 0;
   padding: 0;
 }
 /* remove number arrows */
-input[type='number']::-webkit-outer-spin-button,
-input[type='number']::-webkit-inner-spin-button {
+.views-block[type='number']::-webkit-outer-spin-button,
+.views-block[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }`

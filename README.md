@@ -1,8 +1,11 @@
-# use-views
+# Views Tools use
 
 A tool to help you install Views in your create-react-app or create-react-native-app project
 
+[Looking for Views Tools docs?](https://github.com/viewstools/docs)
+
 ## React DOM
+
 Using [create-react-app](https://github.com/facebookincubator/create-react-app).
 
 ```
@@ -14,6 +17,7 @@ npm start
 ```
 
 ## React Native
+
 Using [create-react-native-app](https://github.com/react-community/create-react-native-app)
 
 ```
@@ -24,11 +28,13 @@ use-views
 ```
 
 Running the iOS simulator
+
 ```
 npm run ios
 ```
 
 Running the Android simulator
+
 ```
 npm run android
 ```
@@ -40,14 +46,11 @@ press the button to try again.
 You can also use a real device for testing, [see this](https://github.com/react-community/create-react-native-app#npm-run-ios)
 for more info.
 
-
-
-You can find the docs at https://github.com/viewsdx/docs
-If you need any help, get in touch at https://twitter.com/viewsdx or
-join our Slack community at https://slack.viewsdx.com
+You can find the docs at https://github.com/viewstools/docs
+If you need any help, get in touch at https://twitter.com/viewstools or
+join our Slack community at https://slack.viewstools.com
 
 Happy coding! :)
-
 
 BSD-3-Clause
 
