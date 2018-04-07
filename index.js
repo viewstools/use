@@ -283,7 +283,9 @@ run()
 // files
 const APP_VIEW = `App Vertical
 alignItems center
-flex 1
+flexGrow 1
+flexShrink 1
+flexBasis auto
 justifyContent center
 Text
 fontSize 18
