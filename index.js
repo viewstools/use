@@ -87,9 +87,11 @@ async function run() {
   await Promise.all([
     getLatestVersion(reactRouter),
     getLatestVersion('prop-types'),
-  ]).then(([router, propTypes]) => {
+    getLatestVersion('@viewstools/animations'),
+  ]).then(([router, propTypes, animations]) => {
     addDependency(reactRouter, router)
     addDependency('prop-types', propTypes)
+    addDependency('@viewstools/animations', animations)
   })
 
   if (isReactDom) {
@@ -299,7 +301,6 @@ export default class AppLogic extends React.Component {
 }`
 
 const APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
-import { Animated } from 'react-native'
 import fonts from '../fonts.js'
 import React from 'react'
 import App from './App.view.js'
