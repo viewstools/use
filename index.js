@@ -95,10 +95,8 @@ async function run() {
   if (isReactDom) {
     await Promise.all([
       getLatestVersion('emotion'),
-      getLatestVersion('react-emotion'),
-    ]).then(([emotion, reactEmotion]) => {
+    ]).then(([emotion]) => {
       addDependency('emotion', emotion)
-      addDependency('react-emotion', reactEmotion)
     })
   }
 
