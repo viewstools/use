@@ -88,10 +88,12 @@ async function run() {
     getLatestVersion(reactRouter),
     getLatestVersion('prop-types'),
     getLatestVersion('@viewstools/animations'),
-  ]).then(([router, propTypes, animations]) => {
+    getLatestVersion('@viewstools/tables'),
+  ]).then(([router, propTypes, animations, tables]) => {
     addDependency(reactRouter, router)
     addDependency('prop-types', propTypes)
     addDependency('@viewstools/animations', animations)
+    addDependency('@viewstools/tables', tables)
   })
 
   if (isReactDom) {
