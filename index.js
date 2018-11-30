@@ -75,31 +75,14 @@ async function run() {
   // dependencies
   await Promise.all([
     getLatestVersion('@viewstools/morph'),
-    getLatestVersion('@viewstools/e2e'),
     getLatestVersion('concurrently'),
   ]).then(([morph, e2e, concurrently]) => {
     addDevDependency('@viewstools/morph', morph)
-    addDevDependency('@viewstools/e2e', e2e)
     addDevDependency('concurrently', concurrently)
   })
 
-  const reactRouter = isReactDom ? 'react-router-dom' : 'react-router-native'
-  await Promise.all([
-    getLatestVersion(reactRouter),
-    getLatestVersion('prop-types'),
-    getLatestVersion('@viewstools/animations'),
-    getLatestVersion('@viewstools/tables'),
-  ]).then(([router, propTypes, animations, tables]) => {
-    addDependency(reactRouter, router)
-    addDependency('prop-types', propTypes)
-    addDependency('@viewstools/animations', animations)
-    addDependency('@viewstools/tables', tables)
-  })
-
   if (isReactDom) {
-    await Promise.all([
-      getLatestVersion('emotion'),
-    ]).then(([emotion]) => {
+    await Promise.all([getLatestVersion('emotion')]).then(([emotion]) => {
       addDependency('emotion', emotion)
     })
   }
@@ -109,18 +92,12 @@ async function run() {
 
   // setup scripts
   pkg.scripts.dev = pkg.scripts.start
-  pkg.scripts.start = `concurrently "npm run dev" "npm run views"`
+  pkg.scripts.start = `concurrently --names 'react,views' --handle-input npm:dev npm:views`
   pkg.scripts.views = `views-morph src --watch --as ${
     isReactDom ? 'react-dom' : 'react-native'
   }`
   if (isReactDom) {
     pkg.scripts.prebuild = `views-morph src --as react-dom`
-  } else {
-    pkg.scripts['dev:ios'] = pkg.scripts.ios
-    pkg.scripts.ios = `concurrently "npm run dev:ios" "npm run views"`
-
-    pkg.scripts['dev:android'] = pkg.scripts.android
-    pkg.scripts.android = `concurrently "npm run dev:android" "npm run views"`
   }
 
   // write package.json
@@ -180,7 +157,7 @@ async function run() {
     )
 
     // write fonts.js
-    fs.writeFileSync(path.join(cwd, 'src', 'fonts.js'), FONTS_NATIVE)
+    fs.writeFileSync(path.join(cwd, 'assets', 'fonts.js'), FONTS_NATIVE)
   }
 
   // add views generated files to .gitignore
@@ -270,12 +247,9 @@ use-views`)
 
 function getInTouch() {
   console.log(
-    `\nIf you need any help, get in touch at ${chalk.blue(
-      'https://twitter.com/viewstools'
-    )} or`
-  )
-  console.log(
-    `join our Slack community at ${chalk.blue('https://slack.views.tools')}\n`
+    `\nIf you need any help, join our Slack community at ${chalk.blue(
+      'https://slack.views.tools'
+    )}\n`
   )
 }
 
@@ -303,7 +277,7 @@ export default class AppLogic extends React.Component {
 }`
 
 const APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
-import fonts from '../fonts.js'
+import fonts from '../../assets/fonts.js'
 import React from 'react'
 import App from './App.view.js'
 
@@ -344,7 +318,7 @@ const FONTS_NATIVE = `export default {
 //
 // Font definition:
 //
-//  'RobotoMono-300': require('./assets/fonts/RobotoMono-300.ttf'),
+//  'RobotoMono-300': require('./fonts/RobotoMono-300.ttf'),
 //
 }`
 
