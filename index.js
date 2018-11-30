@@ -76,7 +76,7 @@ async function run() {
   await Promise.all([
     getLatestVersion('@viewstools/morph'),
     getLatestVersion('concurrently'),
-  ]).then(([morph, e2e, concurrently]) => {
+  ]).then(([morph, concurrently]) => {
     addDevDependency('@viewstools/morph', morph)
     addDevDependency('concurrently', concurrently)
   })
