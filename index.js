@@ -344,6 +344,7 @@ body,
   border-radius: 0;
   border: 0;
   box-sizing: border-box;
+  color: inherit;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
