@@ -258,52 +258,44 @@ run()
 
 // files
 const APP_VIEW = `App Vertical
-alignItems center
-flexGrow 1
-flexShrink 1
-flexBasis auto
-justifyContent center
-Text
-fontSize 18
-text < Hello Views Tools!`
+  alignItems center
+  flexGrow 1
+  flexShrink 1
+  flexBasis auto
+  justifyContent center
+  Text
+    fontSize 18
+    text Hello Views Tools!`
 
-const APP_VIEW_LOGIC_DOM = `import React from 'react'
-import App from './App.view.js'
+const APP_VIEW_LOGIC_DOM = `import App from './App.view.js'
+import React from 'react'
 
-export default class AppLogic extends React.Component {
-  render() {
-    return <App {...this.props} />
-  }
-}`
+let AppLogic = props => {
+  return <App {...props} />
+}
+export default AppLogic`
 
 const APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
-import fonts from '../../assets/fonts.js'
-import React from 'react'
 import App from './App.view.js'
+import fonts from '../../assets/fonts.js'
+import React, { useState } from 'react'
 
-export default class AppLogic extends React.Component {
-  state = {
-    isReady: false,
+let AppLogic = props => {
+  let [isReady, setIsReady] = useState(false)
+
+  if (!isReady) {
+    return (
+      <AppLoading
+        startAsync={() => Font.loadAsync(fonts)}
+        onFinish={() => setIsReady(true)}
+        onError={console.warn}
+      />
+    );
   }
 
-  render() {
-    if (!this.state.isReady) {
-      return (
-        <AppLoading
-          startAsync={this._cacheResourcesAsync}
-          onFinish={() => this.setState({ isReady: true })}
-          onError={console.warn}
-        />
-      );
-    }
-
-    return <App {...this.props} />
-  }
-
-  _cacheResourcesAsync() {
-    return Font.loadAsync(fonts)
-  }
-}`
+  return <App {...props} />
+}
+export default AppLogic`
 
 const APP_NATIVE = `import App from './src/Main/App.view.logic.js'
 export default App`
@@ -337,8 +329,7 @@ body,
   height: 100%;
   margin: 0;
 }
-.views-block,
-#root {
+.views-block, #root {
   align-items: stretch;
   background-color: transparent;
   border-radius: 0;
@@ -348,28 +339,34 @@ body,
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  font-family: inherit;
+  font-size: inherit;
   hyphens: auto;
+  line-height: inherit;
   margin: 0;
-  margin: 0;
+  outline: 0;
   overflow-wrap: break-word;
-  padding: 0;
   padding: 0;
   position: relative;
   text-align: left;
   text-decoration: none;
+  white-space: normal;
   word-wrap: break-word;
 }
 .views-text {
   box-sizing: border-box;
   hyphens: auto;
+  outline: 0;
   overflow-wrap: break-word;
   word-wrap: break-word;
 }
 .views-capture {
+  background-color: transparent;
   box-sizing: border-box;
   border-radius: 0;
   border: 0;
   hyphens: auto;
+  outline: 0;
   overflow-wrap: break-word;
   word-wrap: break-word;
 }
@@ -381,43 +378,6 @@ body,
 /* remove number arrows */
 .views-capture[type='number']::-webkit-outer-spin-button,
 .views-capture[type='number']::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.views-block, #root {
-  align-items: stretch;
-  box-sizing: border-box;
-  color: inherit;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  hyphens: auto;
-  margin: 0;
-  outline: 0;
-  overflow-wrap: break-word;
-  padding: 0;
-  position: relative;
-  text-decoration: none;
-  word-wrap: break-word;
-  background-color: transparent;
-  border-radius: 0;
-  border: 0;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-  white-space: normal;
-}
-.views-block::-moz-focus-inner {
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-/* remove number arrows */
-.views-block[type='number']::-webkit-outer-spin-button,
-.views-block[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }`
