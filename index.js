@@ -1,54 +1,38 @@
-const { execSync } = require('child_process')
-const boxen = require('boxen')
-const chalk = require('chalk')
-const fs = require('fs')
-const hasYarn = require('has-yarn')
-const ora = require('ora')
-const path = require('path')
-const getLatestVersion = require('latest-version')
-const updateNotifier = require('update-notifier')
+let { existsSync, promises: fs } = require('fs')
+let util = require('util')
+let exec = util.promisify(require('child_process').exec)
+let boxen = require('boxen')
+let chalk = require('chalk')
+let hasYarn = require('has-yarn')
+let ora = require('ora')
+let path = require('path')
+let getLatestVersion = require('latest-version')
+let updateNotifier = require('update-notifier')
 
-const cwd = process.cwd()
-const pkgPath = path.join(cwd, 'package.json')
-const thisPkg = require('./package.json')
+let cwd = process.cwd()
+let pkgPath = path.join(cwd, 'package.json')
+let thisPkg = require('./package.json')
 
-if (thisPkg.name === 'use-views') {
-  console.log(
-    boxen(
-      [
-        chalk.red(
-          `use-views is deprecated, use @viewstools/use instead. Run this to update:`
-        ),
-        chalk.green(`npm install --global @viewstools/use`),
-        chalk.green(`npm uninstall --global use-views`),
-      ].join('\n'),
-      {
-        padding: 1,
-      }
-    )
-  )
-} else {
-  updateNotifier({
-    pkg: thisPkg,
-    updateCheckInterval: 0,
-  }).notify()
-}
+updateNotifier({
+  pkg: thisPkg,
+  updateCheckInterval: 0,
+}).notify()
 
-if (!fs.existsSync(pkgPath)) {
+if (!existsSync(pkgPath)) {
   unsupported()
   process.exit()
 }
 
-const pkg = require(pkgPath)
-const isReactDom = 'react-dom' in pkg.dependencies
-const isReactNative = 'react-native' in pkg.dependencies
+let pkg = require(pkgPath)
+let isReactNative = 'react-native' in pkg.dependencies
+let isReactDom = !isReactNative && 'react-dom' in pkg.dependencies
 
 if (!pkg.devDependencies) {
   pkg.devDependencies = {}
 }
 
 // exit if this is already a views-morph project
-if ('@viewstools/morph' in pkg.devDependencies) {
+if ('@viewstools/morph' in pkg.dependencies) {
   console.log(chalk.blue(`This is already a Views project! 🔥 🎉 \n`))
   help()
   process.exit()
@@ -67,24 +51,21 @@ console.log(
 
 let spinner = ora('Getting the latest versions of Views dependencies').start()
 
-const addDependency = (dep, version) => (pkg.dependencies[dep] = `^${version}`)
-const addDevDependency = (dep, version) =>
+let addDependency = (dep, version) => (pkg.dependencies[dep] = `^${version}`)
+let addDevDependency = (dep, version) =>
   (pkg.devDependencies[dep] = `^${version}`)
 
 async function run() {
   // dependencies
-  await Promise.all([
+  let [morph, concurrently] = await Promise.all([
     getLatestVersion('@viewstools/morph'),
     getLatestVersion('concurrently'),
-  ]).then(([morph, concurrently]) => {
-    addDevDependency('@viewstools/morph', morph)
-    addDevDependency('concurrently', concurrently)
-  })
+  ])
+  addDependency('@viewstools/morph', morph)
+  addDevDependency('concurrently', concurrently)
 
   if (isReactDom) {
-    await Promise.all([getLatestVersion('emotion')]).then(([emotion]) => {
-      addDependency('emotion', emotion)
-    })
+    addDependency('emotion', await getLatestVersion('emotion'))
   }
 
   spinner.succeed()
@@ -101,70 +82,79 @@ async function run() {
   }
 
   // write package.json
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
+  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2))
 
   spinner.succeed()
   spinner = ora('Installing the dependencies').start()
 
+  // clear yarn.lock, it's causing issues with fsevents from time to time
+  try {
+    await fs.unlink(path.join(cwd, 'yarn.lock'))
+  } catch (error) {}
   // install the dependencies
-  execSync(hasYarn(cwd) ? 'yarn' : 'npm install')
+  await exec(hasYarn(cwd) ? 'yarn' : 'npm install')
+  // TODO handle errors when installing the dependencies
 
   spinner.succeed()
   spinner = ora('Preparing a sample View for you to work with').start()
 
   // create a src directory
   try {
-    fs.mkdirSync(path.join(cwd, 'src'))
+    await fs.mkdir(path.join(cwd, 'src'))
   } catch (err) {}
   try {
-    fs.mkdirSync(path.join(cwd, 'src', 'Main'))
+    await fs.mkdir(path.join(cwd, 'src', 'Stories'))
   } catch (err) {}
 
   // bootstrap files
   if (isReactDom) {
     // in src/index.js
-    const indexPath = path.join(cwd, 'src', 'index.js')
-    const index = fs.readFileSync(indexPath, { encoding: 'utf-8' })
+    let indexPath = path.join(cwd, 'src', 'index.js')
+    let index = await fs.readFile(indexPath, { encoding: 'utf-8' })
     // set App to load App.view.logic
-    fs.writeFileSync(
+    await fs.writeFile(
       indexPath,
-      index.replace(`./App`, `./Main/App.view.logic.js`)
+      index.replace(`./App`, `./Stories/App.view.logic.js`)
     )
 
     // remove unused files
-    ;['App.css', 'App.js', 'App.test.js', 'logo.svg'].forEach(f => {
-      try {
-        fs.unlinkSync(path.join(cwd, 'src', f))
-      } catch (err) {}
-    })
+    await Promise.all(
+      ['App.css', 'App.js', 'App.test.js', 'logo.svg'].map(async f => {
+        try {
+          await fs.unlink(path.join(cwd, 'src', f))
+        } catch (err) {}
+      })
+    )
 
     // write views flexbox first css
-    fs.writeFileSync(path.join(cwd, 'src', 'index.css'), VIEWS_CSS)
+    await fs.writeFile(path.join(cwd, 'src', 'index.css'), VIEWS_CSS)
 
     // write App.view.logic.js
-    fs.writeFileSync(
-      path.join(cwd, 'src', 'Main', 'App.view.logic.js'),
+    await fs.writeFile(
+      path.join(cwd, 'src', 'Stories', 'App.view.logic.js'),
       APP_VIEW_LOGIC_DOM
     )
   } else {
     // write App.js
-    fs.writeFileSync(path.join(cwd, 'App.js'), APP_NATIVE)
+    await fs.writeFile(path.join(cwd, 'App.js'), APP_NATIVE)
 
     // write App.view.logic.js
-    fs.writeFileSync(
-      path.join(cwd, 'src', 'Main', 'App.view.logic.js'),
+    await fs.writeFile(
+      path.join(cwd, 'src', 'Stories', 'App.view.logic.js'),
       APP_VIEW_LOGIC_NATIVE
     )
 
     // write fonts.js
-    fs.writeFileSync(path.join(cwd, 'assets', 'fonts.js'), FONTS_NATIVE)
+    await fs.writeFile(path.join(cwd, 'assets', 'fonts.js'), FONTS_NATIVE)
   }
 
   // add views generated files to .gitignore
-  fs.appendFileSync(path.join(cwd, '.gitignore'), GITIGNORE)
+  await fs.appendFile(path.join(cwd, '.gitignore'), GITIGNORE)
 
   // write App.view
-  fs.writeFileSync(path.join(cwd, 'src', 'Main', 'App.view'), APP_VIEW)
+  await fs.writeFile(path.join(cwd, 'src', 'Stories', 'App.view'), APP_VIEW)
+
+  await fs.writeFile(path.join(cwd, 'jsconfig.json'), JSCONFIG_JSON)
 
   spinner.succeed()
 
@@ -175,7 +165,7 @@ async function run() {
 
   console.log(
     `Go ahead and open the file ${chalk.green(
-      'src/Main/App.view'
+      'src/Stories/App.view'
     )} in your editor and change something ✏️`
   )
   console.log(
@@ -218,7 +208,7 @@ for more info.`)
 
 function unsupported() {
   console.log(
-    `It looks like the directory you're on isn't either a create-react-app or create-react-native-app project.`
+    `It looks like the directory you're on isn't either a create-react-app or expo (react native) project.`
   )
   console.log(`Is ${chalk.yellow(cwd)} the right folder?\n`)
   console.log(
@@ -236,8 +226,9 @@ use-views`)
     `\nFor ${chalk.blue('React Native')}, ie, an iOS or Android project:`
   )
   console.log(
-    chalk.green(`npm install --global create-react-native-app
-create-react-native-app my-native-app
+    chalk.green(`npm install --global expo-cli
+# choose the blank template and follow expo's wizard
+expo init my-native-app
 cd my-native-app
 use-views`)
   )
@@ -247,8 +238,8 @@ use-views`)
 
 function getInTouch() {
   console.log(
-    `\nIf you need any help, join our Slack community at ${chalk.blue(
-      'https://slack.views.tools'
+    `\nIf you need any help, join our GitHub community at ${chalk.blue(
+      'https://docs.views.tools'
     )}\n`
   )
 }
@@ -257,30 +248,38 @@ function getInTouch() {
 run()
 
 // files
-const APP_VIEW = `App Vertical
+let APP_VIEW = `App View
+flow together
+  Vertical
+  flow together
   alignItems center
   flexBasis auto
   flexGrow 1
   flexShrink 1
   justifyContent center
-  Text
+    Text
     fontSize 18
     text Hello Views Tools!`
 
-const APP_VIEW_LOGIC_DOM = `import App from './App.view.js'
+let APP_VIEW_LOGIC_DOM = `import App from './App.view.js'
+import { Flow } from '../useFlow.js'
 import React from 'react'
 
-let AppLogic = props => {
-  return <App {...props} />
-}
-export default AppLogic`
+export default function AppLogic(props) {
+  return (
+    <Flow>
+      <App {...props} />
+    </Flow>
+  )
+}`
 
-const APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
+let APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
 import App from './App.view.js'
+import { Flow } from '../useFlow.js'
 import fonts from '../../assets/fonts.js'
 import React, { useState } from 'react'
 
-let AppLogic = props => {
+export default function AppLogic(props) {
   let [isReady, setIsReady] = useState(false)
 
   if (!isReady) {
@@ -293,14 +292,17 @@ let AppLogic = props => {
     );
   }
 
-  return <App {...props} />
-}
-export default AppLogic`
+  return (
+    <Flow>
+      <App {...props} />
+    </Flow>
+  )
+}`
 
-const APP_NATIVE = `import App from './src/Main/App.view.logic.js'
+let APP_NATIVE = `import App from './src/Stories/App.view.logic.js'
 export default App`
 
-const FONTS_NATIVE = `export default {
+let FONTS_NATIVE = `export default {
 // At some point, Views will do this automatically. For now, you
 // need to write your fonts by hand. Here's an example of a font used like:
 // Text
@@ -314,12 +316,17 @@ const FONTS_NATIVE = `export default {
 //
 }`
 
-const GITIGNORE = `
+let GITIGNORE = `
 # views
 **/*.view.js
-**/Fonts/*.js`
+**/Fonts/*.js
+src/index-viewstools.js
+src/useFlow.js
+src/useIsBefore.js
+src/useIsMedia.js
+src/useTools.js`
 
-const VIEWS_CSS = `* {
+let VIEWS_CSS = `* {
   -webkit-overflow-scrolling: touch;
   -ms-overflow-style: -ms-autohiding-scrollbar;
 }
@@ -380,4 +387,12 @@ body,
 .views-capture[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}`
+
+let JSCONFIG_JSON = `{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "skipLibCheck": true
+  },
+  "include": ["src"]
 }`
