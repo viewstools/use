@@ -1,22 +1,14 @@
 let { existsSync, promises: fs } = require('fs')
 let util = require('util')
 let exec = util.promisify(require('child_process').exec)
-let boxen = require('boxen')
 let chalk = require('chalk')
 let hasYarn = require('has-yarn')
 let ora = require('ora')
 let path = require('path')
 let getLatestVersion = require('latest-version')
-let updateNotifier = require('update-notifier')
 
 let cwd = process.cwd()
 let pkgPath = path.join(cwd, 'package.json')
-let thisPkg = require('./package.json')
-
-updateNotifier({
-  pkg: thisPkg,
-  updateCheckInterval: 0,
-}).notify()
 
 if (!existsSync(pkgPath)) {
   unsupported()
@@ -51,34 +43,77 @@ console.log(
 
 let spinner = ora('Getting the latest versions of Views dependencies').start()
 
-let addDependency = (dep, version) => (pkg.dependencies[dep] = `^${version}`)
-let addDevDependency = (dep, version) =>
-  (pkg.devDependencies[dep] = `^${version}`)
+async function addDependency(dep) {
+  let version = await getLatestVersion(dep)
+  pkg.dependencies[dep] = `^${version}`
+}
 
 async function run() {
   // dependencies
-  let [morph, concurrently] = await Promise.all([
-    getLatestVersion('@viewstools/morph'),
-    getLatestVersion('concurrently'),
+  await Promise.all([
+    addDependency('@viewstools/morph'),
+    addDependency('concurrently'),
+    addDependency('husky'),
+    addDependency('lint-staged'),
+    addDependency('prettier'),
+    addDependency('immer'),
+    addDependency('graphql'),
+    addDependency('graphql-tag'),
+    addDependency('urql'),
   ])
-  addDependency('@viewstools/morph', morph)
-  addDevDependency('concurrently', concurrently)
 
   if (isReactDom) {
-    addDependency('emotion', await getLatestVersion('emotion'))
+    await Promise.all([
+      addDependency('emotion'),
+      addDependency('react-app-rewired'),
+      addDependency('customize-cra'),
+      addDependency('customize-cra-react-refresh'),
+      addDependency('internal-ip'),
+      addDependency('use-media'),
+      addDependency('@viewstools/use-masked-input'),
+      addDependency('react-app-polyfill'),
+      addDependency('@reach/dialog'),
+      addDependency('react-spring'),
+      addDependency('mousetrap'),
+      addDependency('react-virtualized-auto-sizer'),
+      addDependency('react-window'),
+    ])
+
+    pkg.browserslist = {
+      production: ['>0.2%', 'not dead', 'not op_mini all', 'ios > 9'],
+      development: [
+        'last 1 chrome version',
+        'last 1 firefox version',
+        'last 1 safari version',
+      ],
+    }
+
+    pkg.husky = {
+      hooks: {
+        'pre-commit': 'lint-staged',
+      },
+    }
+
+    pkg['lint-staged'] = {
+      '*.{js,json,css,md}': ['prettier --write', 'git add'],
+    }
   }
 
   spinner.succeed()
   spinner = ora('Setting up the project').start()
 
   // setup scripts
-  pkg.scripts.dev = pkg.scripts.start
-  pkg.scripts.start = `concurrently --names 'react,views' --handle-input npm:dev npm:views`
-  pkg.scripts.views = `views-morph src --watch --as ${
+  pkg.scripts['start:react'] = pkg.scripts.start
+  pkg.scripts.start = `concurrently --kill-others npm:start:*`
+  pkg.scripts['start:views'] = `views-morph src --watch --as ${
     isReactDom ? 'react-dom' : 'react-native'
   }`
   if (isReactDom) {
+    pkg.scripts['start:react'] =
+      'LOCAL_IP=`node -e "process.stdout.write(require(\'internal-ip\').v4.sync())"` react-app-rewired start'
     pkg.scripts.prebuild = `views-morph src --as react-dom`
+    pkg.scripts.build = 'react-app-rewired build'
+    pkg.scripts.test = 'react-app-rewired test'
   }
 
   // write package.json
@@ -103,8 +138,10 @@ async function run() {
     await fs.mkdir(path.join(cwd, 'src'))
   } catch (err) {}
   try {
-    await fs.mkdir(path.join(cwd, 'src', 'Stories'))
+    await fs.mkdir(path.join(cwd, 'src', 'Views'))
   } catch (err) {}
+
+  await fs.writeFile(path.join(cwd, '.prettierrc'), PRETTIER_RC)
 
   // bootstrap files
   if (isReactDom) {
@@ -114,7 +151,19 @@ async function run() {
     // set App to load App.view.logic
     await fs.writeFile(
       indexPath,
-      index.replace(`./App`, `./Stories/App.view.logic.js`)
+      `import 'react-app-polyfill/stable'
+import '@reach/dialog/styles.css'
+import './version.js'
+${index.replace(`./App`, `./Views/App.view.logic.js`)}
+
+// not ideal but...
+let error = window.console.error;
+window.console.error = (...args) => {
+  if (/(cannot appear as a descendant of|must have either an)/.test(args[0]))
+    return;
+
+  error(...args);
+};`
     )
 
     // remove unused files
@@ -126,13 +175,21 @@ async function run() {
       })
     )
 
-    // write views flexbox first css
-    await fs.writeFile(path.join(cwd, 'src', 'index.css'), VIEWS_CSS)
-
-    // write App.view.logic.js
-    await fs.writeFile(
-      path.join(cwd, 'src', 'Stories', 'App.view.logic.js'),
-      APP_VIEW_LOGIC_DOM
+    await Promise.all(
+      [
+        // write views flexbox first css
+        [path.join(cwd, 'src', 'index.css'), VIEWS_CSS],
+        // write App.view.logic.js
+        [
+          path.join(cwd, 'src', 'Views', 'App.view.logic.js'),
+          APP_VIEW_LOGIC_DOM,
+        ],
+        // setup react-refresh
+        [path.join(cwd, 'config-overrides.js'), CONFIG_OVERRIDES],
+        [path.join(cwd, '.eslintrc'), ESLINTRC],
+        [path.join(cwd, '.env.development'), ENV_DEVELOPMENT],
+        [path.join(cwd, 'src', 'version.js'), VERSION],
+      ].map(([file, content]) => fs.writeFile(file, content))
     )
   } else {
     // write App.js
@@ -140,7 +197,7 @@ async function run() {
 
     // write App.view.logic.js
     await fs.writeFile(
-      path.join(cwd, 'src', 'Stories', 'App.view.logic.js'),
+      path.join(cwd, 'src', 'Views', 'App.view.logic.js'),
       APP_VIEW_LOGIC_NATIVE
     )
 
@@ -152,7 +209,7 @@ async function run() {
   await fs.appendFile(path.join(cwd, '.gitignore'), GITIGNORE)
 
   // write App.view
-  await fs.writeFile(path.join(cwd, 'src', 'Stories', 'App.view'), APP_VIEW)
+  await fs.writeFile(path.join(cwd, 'src', 'Views', 'App.view'), APP_VIEW)
 
   await fs.writeFile(path.join(cwd, 'jsconfig.json'), JSCONFIG_JSON)
 
@@ -165,7 +222,7 @@ async function run() {
 
   console.log(
     `Go ahead and open the file ${chalk.green(
-      'src/Stories/App.view'
+      'src/Views/App.view'
     )} in your editor and change something ✏️`
   )
   console.log(
@@ -198,9 +255,7 @@ You can also use a real device for testing, https://github.com/react-community/c
 for more info.`)
   }
   console.log(
-    `You can find the docs at ${chalk.blue(
-      'https://github.com/viewstools/docs'
-    )}`
+    `You can find the docs at ${chalk.blue('https://docs.views.tools')}`
   )
   getInTouch()
   console.log(`Happy coding! :)`)
@@ -249,9 +304,8 @@ run()
 
 // files
 let APP_VIEW = `App View
-flow together
+is together
   Vertical
-  flow together
   alignItems center
   flexBasis auto
   flexGrow 1
@@ -261,21 +315,21 @@ flow together
     fontSize 18
     text Hello Views Tools!`
 
-let APP_VIEW_LOGIC_DOM = `import App from './App.view.js'
-import { Flow } from '../useFlow.js'
+let APP_VIEW_LOGIC_DOM = `import { ViewsFlow } from 'Logic/ViewsFlow.js'
+import App from './App.view.js'
 import React from 'react'
 
 export default function AppLogic(props) {
   return (
-    <Flow>
+    <ViewsFlow>
       <App {...props} />
-    </Flow>
+    </ViewsFlow>
   )
 }`
 
 let APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
+import { ViewsFlow } from 'Logic/ViewsFlow.js'
 import App from './App.view.js'
-import { Flow } from '../useFlow.js'
 import fonts from '../../assets/fonts.js'
 import React, { useState } from 'react'
 
@@ -293,13 +347,13 @@ export default function AppLogic(props) {
   }
 
   return (
-    <Flow>
+    <ViewsFlow>
       <App {...props} />
-    </Flow>
+    </ViewsFlow>
   )
 }`
 
-let APP_NATIVE = `import App from './src/Stories/App.view.logic.js'
+let APP_NATIVE = `import App from './src/Views/App.view.logic.js'
 export default App`
 
 let FONTS_NATIVE = `export default {
@@ -319,12 +373,15 @@ let FONTS_NATIVE = `export default {
 let GITIGNORE = `
 # views
 **/*.view.js
+**/*.block.js
 **/Fonts/*.js
-src/index-viewstools.js
-src/useFlow.js
-src/useIsBefore.js
-src/useIsMedia.js
-src/useTools.js`
+src/Data/ViewsData.js
+src/Logic/ViewsFlow.js
+src/Logic/useIsBefore.js
+src/Logic/useIsMedia.js
+src/Logic/useIsHovered.js
+src/Logic/ViewsTools.view
+src/Logic/ViewsTools.view.logic.js`
 
 let VIEWS_CSS = `* {
   -webkit-overflow-scrolling: touch;
@@ -395,4 +452,32 @@ let JSCONFIG_JSON = `{
     "skipLibCheck": true
   },
   "include": ["src"]
+}`
+
+let CONFIG_OVERRIDES = `let { override } = require('customize-cra')
+let { addReactRefresh } = require('customize-cra-react-refresh')
+
+module.exports = override(addReactRefresh({ disableRefreshCheck: true }))`
+
+let PRETTIER_RC = `{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "es5"
+}`
+
+let ESLINTRC = `{
+  "extends": "react-app"
+}`
+
+let ENV_DEVELOPMENT = `REACT_APP_API=http://$LOCAL_IP:8080/v1/graphql
+REACT_APP_API_KEY=secret
+REACT_APP_ENV=development
+REACT_APP_NAME=$npm_package_name
+REACT_APP_VERSION=$npm_package_version`
+
+let VERSION = `window.viewsApp = {
+  api: process.env.REACT_APP_API,
+  app: process.env.REACT_APP_NAME,
+  env: process.env.REACT_APP_ENV,
+  version: process.env.REACT_APP_VERSION,
 }`

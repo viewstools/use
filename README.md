@@ -1,30 +1,43 @@
-# Views Tools use
+# Create Views App
 
-A tool to help you install Views in your create-react-app or create-react-native-app project
+A tool to help you create a Views with for web or native
 
-[Looking for Views Tools docs?](https://github.com/viewstools/docs)
+[Looking for Views Tools docs?](https://docs.views.tools)
 
 ## React DOM
 
-Using [create-react-app](https://github.com/facebookincubator/create-react-app).
-
+### With Yarn
 ```
-npm install --global create-react-app use-views
-create-react-app my-app
+yarn create react-app my-app
 cd my-app
-use-views
+yarn create views-app
+yarn start
+```
+
+### With NPM
+```
+npx create-react-app my-app
+cd my-app
+npx create-views-app
 npm start
 ```
 
 ## React Native
 
-Using [create-react-native-app](https://github.com/react-community/create-react-native-app)
-
+### With Yarn
 ```
-npm install --global create-react-native-app use-views
-create-react-native-app my-native-app
-cd my-native-app
-use-views
+yarn create react-native-app my-app
+cd my-app
+yarn create views-app
+yarn start
+```
+
+### With NPM
+```
+npx create-react-native-app my-app
+cd my-app
+npx create-views-app
+npm start
 ```
 
 Running the iOS simulator
@@ -46,9 +59,8 @@ press the button to try again.
 You can also use a real device for testing, [see this](https://github.com/react-community/create-react-native-app#npm-run-ios)
 for more info.
 
-You can find the docs at https://github.com/viewstools/docs
-If you need any help, get in touch at https://twitter.com/viewstools or
-join our Slack community at https://slack.viewstools.com
+You can find the docs at https://docs.views.tools
+If you need any help, get in touch at https://twitter.com/viewstools
 
 Happy coding! :)
 
