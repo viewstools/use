@@ -105,7 +105,7 @@ async function run() {
   // setup scripts
   pkg.scripts['start:react'] = pkg.scripts.start
   pkg.scripts.start = `concurrently --kill-others npm:start:*`
-  pkg.scripts['start:views'] = `views-morph src --watch --as ${
+  pkg.scripts['start:views'] = `REACT_APP_VIEWS_TOOLS=true views-morph src --watch --as ${
     isReactDom ? 'react-dom' : 'react-native'
   }`
   if (isReactDom) {
