@@ -138,7 +138,7 @@ async function run() {
     await fs.mkdir(path.join(cwd, 'src'))
   } catch (err) {}
   try {
-    await fs.mkdir(path.join(cwd, 'src', 'Views'))
+    await fs.mkdir(path.join(cwd, 'src', 'App'))
   } catch (err) {}
 
   await fs.writeFile(path.join(cwd, '.prettierrc'), PRETTIER_RC)
@@ -148,13 +148,13 @@ async function run() {
     // in src/index.js
     let indexPath = path.join(cwd, 'src', 'index.js')
     let index = await fs.readFile(indexPath, { encoding: 'utf-8' })
-    // set App to load App.view.logic
+    // set App to load App/logic.js
     await fs.writeFile(
       indexPath,
       `import 'react-app-polyfill/stable'
 import '@reach/dialog/styles.css'
 import './version.js'
-${index.replace(`./App`, `./Views/App.view.logic.js`)}
+${index.replace(`./App`, `./App/logic.js`)}
 
 // not ideal but...
 let error = window.console.error;
@@ -181,7 +181,7 @@ window.console.error = (...args) => {
         [path.join(cwd, 'src', 'index.css'), VIEWS_CSS],
         // write App.view.logic.js
         [
-          path.join(cwd, 'src', 'Views', 'App.view.logic.js'),
+          path.join(cwd, 'src', 'App', 'logic.js'),
           APP_VIEW_LOGIC_DOM,
         ],
         // setup react-refresh
@@ -197,7 +197,7 @@ window.console.error = (...args) => {
 
     // write App.view.logic.js
     await fs.writeFile(
-      path.join(cwd, 'src', 'Views', 'App.view.logic.js'),
+      path.join(cwd, 'src', 'App', 'logic.js'),
       APP_VIEW_LOGIC_NATIVE
     )
 
@@ -209,7 +209,7 @@ window.console.error = (...args) => {
   await fs.appendFile(path.join(cwd, '.gitignore'), GITIGNORE)
 
   // write App.view
-  await fs.writeFile(path.join(cwd, 'src', 'Views', 'App.view'), APP_VIEW)
+  await fs.writeFile(path.join(cwd, 'src', 'App', 'view.blocks'), APP_VIEW)
 
   await fs.writeFile(path.join(cwd, 'jsconfig.json'), JSCONFIG_JSON)
 
@@ -222,7 +222,7 @@ window.console.error = (...args) => {
 
   console.log(
     `Go ahead and open the file ${chalk.green(
-      'src/Views/App.view'
+      'src/App/view.blocks'
     )} in your editor and change something ✏️`
   )
   console.log(
@@ -316,24 +316,24 @@ is together
     text Hello Views Tools!`
 
 let APP_VIEW_LOGIC_DOM = `import { ViewsFlow } from 'Logic/ViewsFlow.js'
-import App from './App.view.js'
+import View from './view.js'
 import React from 'react'
 
-export default function AppLogic(props) {
+export default function Logic(props) {
   return (
     <ViewsFlow>
-      <App {...props} />
+      <View {...props} />
     </ViewsFlow>
   )
 }`
 
 let APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
 import { ViewsFlow } from 'Logic/ViewsFlow.js'
-import App from './App.view.js'
+import View from './view.js'
 import fonts from '../../assets/fonts.js'
 import React, { useState } from 'react'
 
-export default function AppLogic(props) {
+export default function Logic(props) {
   let [isReady, setIsReady] = useState(false)
 
   if (!isReady) {
@@ -348,12 +348,12 @@ export default function AppLogic(props) {
 
   return (
     <ViewsFlow>
-      <App {...props} />
+      <View {...props} />
     </ViewsFlow>
   )
 }`
 
-let APP_NATIVE = `import App from './src/Views/App.view.logic.js'
+let APP_NATIVE = `import App from './src/App/logic.js'
 export default App`
 
 let FONTS_NATIVE = `export default {
@@ -372,16 +372,14 @@ let FONTS_NATIVE = `export default {
 
 let GITIGNORE = `
 # views
-**/*.view.js
-**/*.block.js
-**/Fonts/*.js
+**/view.js
+**/DesignSystem/Fonts/*.js
 src/Data/ViewsData.js
 src/Logic/ViewsFlow.js
 src/Logic/useIsBefore.js
 src/Logic/useIsMedia.js
 src/Logic/useIsHovered.js
-src/Logic/ViewsTools.view
-src/Logic/ViewsTools.view.logic.js`
+src/Logic/ViewsTools.js`
 
 let VIEWS_CSS = `* {
   -webkit-overflow-scrolling: touch;
