@@ -376,6 +376,7 @@ let GITIGNORE = `
 **/DesignSystem/Fonts/*.js
 src/Data/ViewsData.js
 src/Logic/ViewsFlow.js
+src/Logic/ViewsToolsDesignSystem.js
 src/Logic/useIsBefore.js
 src/Logic/useIsMedia.js
 src/Logic/useIsHovered.js
