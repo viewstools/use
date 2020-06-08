@@ -202,6 +202,9 @@ window.console.error = (...args) => {
     )
 
     // write fonts.js
+    try {
+      await fs.mkdir(path.join(cwd, 'assets'))
+    } catch (err) {}
     await fs.writeFile(path.join(cwd, 'assets', 'fonts.js'), FONTS_NATIVE)
   }
 
