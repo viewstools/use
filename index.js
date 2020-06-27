@@ -200,12 +200,6 @@ window.console.error = (...args) => {
         [path.join(cwd, 'babel.config.js'), BABEL_CONFIG_JS_NATIVE],
       ].map(([file, content]) => fs.writeFile(file, content))
     )
-
-    // write fonts.js
-    try {
-      await fs.mkdir(path.join(cwd, 'assets'))
-    } catch (err) {}
-    await fs.writeFile(path.join(cwd, 'assets', 'fonts.js'), FONTS_NATIVE)
   }
 
   // add views generated files to .gitignore
@@ -328,48 +322,38 @@ export default function Logic(props) {
   )
 }`
 
-let APP_VIEW_LOGIC_NATIVE = `import { AppLoading, Font } from 'expo'
-import { ViewsFlow } from 'Logic/ViewsFlow.js'
-import View from './view.js'
-import fonts from '../../assets/fonts.js'
-import React, { useState } from 'react'
+let APP_VIEW_LOGIC_NATIVE = `import { useFonts } from 'expo-font';
+import { ViewsFlow } from 'Logic/ViewsFlow.js';
+import React from 'react';
+import View from './view.js';
 
 export default function Logic(props) {
-  let [isReady, setIsReady] = useState(false)
+  let [loaded] = useFonts({
+    // At some point, Views will do this automatically. For now, you
+    // need to write your fonts by hand.
+    //
+    // 1) Download the font into src/DesignSystem/Fonts. The name of the file is FontFamily-Weight.ttf
+    // 2) Use it in a view:
+    //    Text
+    //    fontFamily Robot Mono
+    //    fontWeight 300
+    //    text hey I'm using Roboto Mono!
+    // 3) Add it to this object like:
+    //
+    // 'Montserrat-300': require('../DesignSystem/Fonts/Montserrat-300.ttf'),
+  });
 
-  if (!isReady) {
-    return (
-      <AppLoading
-        startAsync={() => Font.loadAsync(fonts)}
-        onFinish={() => setIsReady(true)}
-        onError={console.warn}
-      />
-    );
-  }
+  if (!loaded) return null
 
   return (
     <ViewsFlow>
       <View {...props} />
     </ViewsFlow>
-  )
+  );
 }`
 
 let APP_NATIVE = `import App from './src/App/logic.js'
 export default App`
-
-let FONTS_NATIVE = `export default {
-// At some point, Views will do this automatically. For now, you
-// need to write your fonts by hand. Here's an example of a font used like:
-// Text
-// fontFamily Robot Mono
-// fontWeight 300
-// text hey I'm using Roboto Mono!
-//
-// Font definition:
-//
-//  'RobotoMono-300': require('./fonts/RobotoMono-300.ttf'),
-//
-}`
 
 let GITIGNORE = `
 # views
