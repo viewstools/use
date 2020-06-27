@@ -459,7 +459,7 @@ let JSCONFIG_JSON = `{
 let CONFIG_OVERRIDES = `let { override } = require('customize-cra')
 let { addReactRefresh } = require('customize-cra-react-refresh')
 
-module.exports = override(addReactRefresh({ disableRefreshCheck: true }))`
+module.exports = override(addReactRefresh())`
 
 let PRETTIER_RC = `{
   "semi": true,
