@@ -189,16 +189,16 @@ window.console.error = (...args) => {
         [path.join(cwd, '.eslintrc'), ESLINTRC],
         [path.join(cwd, '.env.development'), ENV_DEVELOPMENT],
         [path.join(cwd, 'src', 'version.js'), VERSION],
+        [path.join(cwd, 'jsconfig.json'), JSCONFIG_JSON],
       ].map(([file, content]) => fs.writeFile(file, content))
     )
   } else {
-    // write App.js
-    await fs.writeFile(path.join(cwd, 'App.js'), APP_NATIVE)
-
-    // write App.view.logic.js
-    await fs.writeFile(
-      path.join(cwd, 'src', 'App', 'logic.js'),
-      APP_VIEW_LOGIC_NATIVE
+    await Promise.all(
+      [
+        [path.join(cwd, 'App.js'), APP_NATIVE],
+        [path.join(cwd, 'src', 'App', 'logic.js'), APP_VIEW_LOGIC_NATIVE],
+        [path.join(cwd, 'babel.config.js'), BABEL_CONFIG_JS_NATIVE],
+      ].map(([file, content]) => fs.writeFile(file, content))
     )
 
     // write fonts.js
@@ -213,8 +213,6 @@ window.console.error = (...args) => {
 
   // write App.view
   await fs.writeFile(path.join(cwd, 'src', 'App', 'view.blocks'), APP_VIEW)
-
-  await fs.writeFile(path.join(cwd, 'jsconfig.json'), JSCONFIG_JSON)
 
   spinner.succeed()
 
@@ -482,4 +480,22 @@ let VERSION = `window.viewsApp = {
   app: process.env.REACT_APP_NAME,
   env: process.env.REACT_APP_ENV,
   version: process.env.REACT_APP_VERSION,
+}`
+
+let BABEL_CONFIG_JS_NATIVE = `let fs = require('fs');
+
+module.exports = function (api) {
+  api.cache(true)
+
+  // Support absolute imports from src like
+  // https://create-react-app.dev/docs/importing-a-component/#absolute-imports
+  let alias = {}
+  fs.readdirSync('./src').forEach(item => {
+    alias[item] = \`./src/\${item}\`
+  })
+
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: [['module-resolver', { alias }]],
+  }
 }`
