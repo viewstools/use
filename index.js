@@ -122,12 +122,13 @@ async function run() {
   spinner.succeed()
   spinner = ora('Installing the dependencies').start()
 
+  let installCommand = hasYarn(cwd) ? 'yarn' : 'npm install'
   // clear yarn.lock, it's causing issues with fsevents from time to time
   try {
     await fs.unlink(path.join(cwd, 'yarn.lock'))
   } catch (error) {}
   // install the dependencies
-  await exec(hasYarn(cwd) ? 'yarn' : 'npm install')
+  await exec(installCommand)
   // TODO handle errors when installing the dependencies
 
   spinner.succeed()
@@ -200,6 +201,8 @@ window.console.error = (...args) => {
         [path.join(cwd, 'babel.config.js'), BABEL_CONFIG_JS_NATIVE],
       ].map(([file, content]) => fs.writeFile(file, content))
     )
+
+    await exec('expo install react-native-svg')
   }
 
   // add views generated files to .gitignore
