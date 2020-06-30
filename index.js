@@ -60,6 +60,7 @@ async function run() {
     addDependency('graphql'),
     addDependency('graphql-tag'),
     addDependency('urql'),
+    addDependency('react-spring'),
   ])
 
   if (isReactDom) {
@@ -73,7 +74,6 @@ async function run() {
       addDependency('@viewstools/use-masked-input'),
       addDependency('react-app-polyfill'),
       addDependency('@reach/dialog'),
-      addDependency('react-spring'),
       addDependency('mousetrap'),
       addDependency('react-virtualized-auto-sizer'),
       addDependency('react-window'),
@@ -97,6 +97,8 @@ async function run() {
     pkg['lint-staged'] = {
       '*.{js,json,css,md}': ['prettier --write', 'git add'],
     }
+  } else if (isReactNative) {
+    addDependency('d3-ease')
   }
 
   spinner.succeed()
