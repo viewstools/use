@@ -1,6 +1,6 @@
 {
   "name": "create-views-app",
-  "version": "23.3.1",
+  "version": "23.4.0",
   "main": "index.js",
   "bin": {
     "create-views-app": "./cli.js"

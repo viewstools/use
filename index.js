@@ -50,34 +50,35 @@ async function addDependency(dep) {
 
 async function run() {
   // dependencies
-  await Promise.all([
-    addDependency('@viewstools/morph'),
-    addDependency('concurrently'),
-    addDependency('husky'),
-    addDependency('lint-staged'),
-    addDependency('prettier'),
-    addDependency('immer'),
-    addDependency('graphql'),
-    addDependency('graphql-tag'),
-    addDependency('urql'),
-    addDependency('react-spring'),
-  ])
+  // await Promise.all([
+  //   addDependency('@viewstools/morph'),
+  //   addDependency('concurrently'),
+  //   addDependency('husky'),
+  //   addDependency('lint-staged'),
+  //   addDependency('prettier'),
+  //   addDependency('immer'),
+  //   addDependency('graphql'),
+  //   addDependency('graphql-tag'),
+  //   addDependency('urql'),
+  //   addDependency('react-spring'),
+  // ])
 
   if (isReactDom) {
-    await Promise.all([
-      addDependency('emotion'),
-      addDependency('react-app-rewired'),
-      addDependency('customize-cra'),
-      addDependency('customize-cra-react-refresh'),
-      addDependency('internal-ip'),
-      addDependency('use-media'),
-      addDependency('@viewstools/use-masked-input'),
-      addDependency('react-app-polyfill'),
-      addDependency('@reach/dialog'),
-      addDependency('mousetrap'),
-      addDependency('react-virtualized-auto-sizer'),
-      addDependency('react-window'),
-    ])
+    await addDependency('@viewstools/create-react-app')
+    // await Promise.all([
+    //   addDependency('emotion'),
+    //   addDependency('react-app-rewired'),
+    //   addDependency('customize-cra'),
+    //   addDependency('customize-cra-react-refresh'),
+    //   addDependency('internal-ip'),
+    //   addDependency('use-media'),
+    //   addDependency('@viewstools/use-masked-input'),
+    //   addDependency('react-app-polyfill'),
+    //   addDependency('@reach/dialog'),
+    //   addDependency('mousetrap'),
+    //   addDependency('react-virtualized-auto-sizer'),
+    //   addDependency('react-window'),
+    // ])
 
     pkg.browserslist = {
       production: ['>0.2%', 'not dead', 'not op_mini all', 'ios > 9'],
@@ -87,18 +88,19 @@ async function run() {
         'last 1 safari version',
       ],
     }
-
-    pkg.husky = {
-      hooks: {
-        'pre-commit': 'lint-staged',
-      },
-    }
-
-    pkg['lint-staged'] = {
-      '*.{js,json,css,md}': ['prettier --write', 'git add'],
-    }
   } else if (isReactNative) {
-    addDependency('d3-ease')
+    await addDependency('@viewstools/create-expo-app')
+    // addDependency('d3-ease')
+  }
+
+  pkg.husky = {
+    hooks: {
+      'pre-commit': 'lint-staged',
+    },
+  }
+
+  pkg['lint-staged'] = {
+    '*.{js,json,css,md}': ['prettier --write', 'git add'],
   }
 
   spinner.succeed()
@@ -107,7 +109,7 @@ async function run() {
   // setup scripts
   pkg.scripts['start:react'] = pkg.scripts.start
   pkg.scripts.start = `concurrently --kill-others npm:start:*`
-  pkg.scripts['start:views'] = `REACT_APP_VIEWS_TOOLS=true views-morph src --watch --as ${
+  pkg.scripts['start:views'] = `views-morph src --watch --as ${
     isReactDom ? 'react-dom' : 'react-native'
   }`
   if (isReactDom) {
@@ -183,10 +185,7 @@ window.console.error = (...args) => {
         // write views flexbox first css
         [path.join(cwd, 'src', 'index.css'), VIEWS_CSS],
         // write App.view.logic.js
-        [
-          path.join(cwd, 'src', 'App', 'logic.js'),
-          APP_VIEW_LOGIC_DOM,
-        ],
+        [path.join(cwd, 'src', 'App', 'logic.js'), APP_VIEW_LOGIC_DOM],
         // setup react-refresh
         [path.join(cwd, 'config-overrides.js'), CONFIG_OVERRIDES],
         [path.join(cwd, '.eslintrc'), ESLINTRC],
