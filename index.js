@@ -107,7 +107,6 @@ async function run() {
   spinner = ora('Setting up the project').start()
 
   // setup scripts
-  pkg.scripts['start:react'] = pkg.scripts.start
   pkg.scripts.start = `concurrently --kill-others npm:start:*`
   pkg.scripts['start:views'] = `views-morph src --watch --as ${
     isReactDom ? 'react-dom' : 'react-native'
@@ -118,6 +117,8 @@ async function run() {
     pkg.scripts.prebuild = `views-morph src --as react-dom`
     pkg.scripts.build = 'react-app-rewired build'
     pkg.scripts.test = 'react-app-rewired test'
+  } else {
+    pkg.scripts['start:react'] = pkg.scripts.ios
   }
 
   // write package.json
@@ -192,6 +193,7 @@ window.console.error = (...args) => {
         [path.join(cwd, '.env.development'), ENV_DEVELOPMENT],
         [path.join(cwd, 'src', 'version.js'), VERSION],
         [path.join(cwd, 'jsconfig.json'), JSCONFIG_JSON],
+        [path.join(cwd, 'app.viewstools'), APP_VIEWSTOOLS_WEB],
       ].map(([file, content]) => fs.writeFile(file, content))
     )
   } else {
@@ -200,6 +202,7 @@ window.console.error = (...args) => {
         [path.join(cwd, 'App.js'), APP_NATIVE],
         [path.join(cwd, 'src', 'App', 'logic.js'), APP_VIEW_LOGIC_NATIVE],
         [path.join(cwd, 'babel.config.js'), BABEL_CONFIG_JS_NATIVE],
+        [path.join(cwd, 'app.viewstools'), APP_VIEWSTOOLS_NATIVE],
       ].map(([file, content]) => fs.writeFile(file, content))
     )
 
@@ -486,4 +489,91 @@ module.exports = function (api) {
     presets: ['babel-preset-expo'],
     plugins: [['module-resolver', { alias }]],
   }
+}`
+
+let APP_VIEWSTOOLS_WEB = `{
+  "version": 1,
+  "url": "http://localhost:3000",
+  "media": {
+    "base": "laptop",
+    "mobile": {
+      "width": 424,
+      "height": 667
+    },
+    "tablet": {
+      "width": 1024,
+      "height": 768
+    },
+    "laptop": {
+      "width": 1280,
+      "height": 800
+    },
+    "desktop": {
+      "width": 2560,
+      "height": 1600
+    }
+  },
+  "runtime": [
+    {
+      "id": "start:views",
+      "name": "Views Morpher",
+      "command": "yarn start:views --tools",
+      "readyCheck": "Views Morpher is ready",
+      "dependsOn": []
+    },
+    {
+      "id": "start:react",
+      "name": "React",
+      "command": "BROWSER=none yarn start:react",
+      "readyCheck": "(Compiled|Welcome to React Native|Expo DevTools is running)",
+      "dependsOn": ["start:views"]
+    }
+    {
+      "id": "preview",
+      "name": "Preview",
+      "command": "open http://localhost:3000 && echo 'Done'",
+      "readyCheck": "Done",
+      "dependsOn": ["start:react"]
+    }
+  ]
+}`
+
+let APP_VIEWSTOOLS_NATIVE = `{
+  "version": 1,
+  "url": "http://localhost:3000",
+  "media": {
+    "base": "laptop",
+    "mobile": {
+      "width": 424,
+      "height": 667
+    },
+    "tablet": {
+      "width": 1024,
+      "height": 768
+    },
+    "laptop": {
+      "width": 1280,
+      "height": 800
+    },
+    "desktop": {
+      "width": 2560,
+      "height": 1600
+    }
+  },
+  "runtime": [
+    {
+      "id": "start:views",
+      "name": "Views Morpher",
+      "command": "yarn start:views --tools",
+      "readyCheck": "Views Morpher is ready",
+      "dependsOn": []
+    },
+    {
+      "id": "start:react",
+      "name": "React",
+      "command": "yarn start:react",
+      "readyCheck": "(Compiled|Welcome to React Native|Expo DevTools is running)",
+      "dependsOn": ["start:views"]
+    }
+  ]
 }`
