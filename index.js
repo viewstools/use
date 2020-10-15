@@ -408,6 +408,9 @@ body,
   white-space: normal;
   word-wrap: break-word;
 }
+.views-block span {
+  pointer-events: none;
+}
 .views-text {
   box-sizing: border-box;
   hyphens: auto;
