@@ -113,7 +113,7 @@ async function run() {
   }`
   if (isReactDom) {
     pkg.scripts['start:react'] =
-      'LOCAL_IP=`node -e "process.stdout.write(require(\'internal-ip\').v4.sync())"` react-app-rewired start'
+      'react-app-rewired start'
     pkg.scripts.prebuild = `views-morph src --as react-dom`
     pkg.scripts.build = 'react-app-rewired build'
     pkg.scripts.test = 'react-app-rewired test'
@@ -317,7 +317,7 @@ is together
     fontSize 18
     text Hello Views Tools!`
 
-let APP_VIEW_LOGIC_DOM = `import { ViewsFlow } from 'Logic/ViewsFlow.js'
+let APP_VIEW_LOGIC_DOM = `import { ViewsFlow } from 'Views/Flow.js'
 import View from './view.js'
 import React from 'react'
 
@@ -330,7 +330,7 @@ export default function Logic(props) {
 }`
 
 let APP_VIEW_LOGIC_NATIVE = `import { useFonts } from 'expo-font';
-import { ViewsFlow } from 'Logic/ViewsFlow.js';
+import { ViewsFlow } from 'Views/Flow.js';
 import React from 'react';
 import View from './view.js';
 
@@ -365,14 +365,10 @@ export default App`
 let GITIGNORE = `
 # views
 **/view.js
+**/view.module.css
 **/DesignSystem/Fonts/*.js
-src/Data/ViewsData.js
-src/Logic/ViewsFlow.js
-src/Logic/ViewsToolsDesignSystem.js
-src/Logic/useIsBefore.js
-src/Logic/useIsMedia.js
-src/Logic/useIsHovered.js
-src/Logic/ViewsTools.js`
+**/DesignSystem/Fonts/*.module.css
+src/Views`
 
 let VIEWS_CSS = `* {
   -webkit-overflow-scrolling: touch;
@@ -538,7 +534,12 @@ let APP_VIEWSTOOLS_WEB = `{
       "readyCheck": "Done",
       "dependsOn": ["start:react"]
     }
-  ]
+  ],
+  "morpherVersion": {
+    "major": 24,
+    "minor": 9,
+    "patch": 1
+  }
 }`
 
 let APP_VIEWSTOOLS_NATIVE = `{
@@ -578,5 +579,10 @@ let APP_VIEWSTOOLS_NATIVE = `{
       "readyCheck": "(Compiled|Welcome to React Native|Expo DevTools is running)",
       "dependsOn": ["start:views"]
     }
-  ]
+  ],
+  "morpherVersion": {
+    "major": 24,
+    "minor": 9,
+    "patch": 1
+  }
 }`
